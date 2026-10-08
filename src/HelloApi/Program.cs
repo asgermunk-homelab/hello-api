@@ -4,7 +4,7 @@ var app = builder.Build();
 
 app.MapGet("/", () => Results.Ok(new
 {
-    message = "Hello from the homelab!",
+    message = "Hello from the homelab, deployed by Flux!",
     environment = app.Environment.EnvironmentName,
     host = Environment.MachineName,
 }));
