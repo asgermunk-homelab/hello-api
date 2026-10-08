@@ -6,9 +6,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Solution Items/.github/workflows/">
-    <File Path=".github/workflows/build.yml" />
-    <File Path=".github/workflows/promote.yml" />
-  </Folder>
+    <File Path=".github/workflows/build.yml" />  </Folder>
   <Folder Name="/src/">
     <Project Path="src/HelloApi/HelloApi.csproj" />
   </Folder>

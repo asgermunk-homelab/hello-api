@@ -1,5 +1,7 @@
 # Pull request: build, check the format, and build the image (no push).
 # Merge to main: the same checks, then push the image to GHCR with a "-dev" tag.
+#   Flux deploys it to dev. Then the "promote" job waits for approval in the
+#   GitHub Environment "prod". Approve it to give the same image a "-prod" tag.
 # Later this moves into the shared workflow in the ci-templates repo.
 name: build
 
@@ -36,6 +38,8 @@ jobs:
     permissions:
       contents: read
       packages: write # needed to push to GHCR
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@v5
 
@@ -64,3 +68,34 @@ jobs:
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # The GitLab "manual job": it waits on the run page for "Review deployments".
+  # Ignore it, or reject it, and nothing goes to prod.
+  # To roll back, revert the change in this repo: the revert builds a new image
+  # with a newer time, and Flux only picks the newest time.
+  promote:
+    needs: image
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: prod # the approval gate
+    permissions:
+      packages: write # needed to add a tag in GHCR
+    env:
+      DEV_TAG: ${{ needs.image.outputs.tag }}
+    steps:
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The prod tag keeps the unix time of the dev tag,
+      # so Flux sorts the prod tags in build order.
+      - name: Retag without a rebuild
+        run: |
+          PROD_TAG="${DEV_TAG%-dev}-prod"
+          docker buildx imagetools create --tag "$IMAGE:$PROD_TAG" "$IMAGE:$DEV_TAG"
+          echo "Promoted $DEV_TAG -> $PROD_TAG" >> "$GITHUB_STEP_SUMMARY"
