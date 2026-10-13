@@ -17,7 +17,8 @@ var otel = builder.Services.AddOpenTelemetry()
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation())
-    .WithLogging();
+    // Send the formatted message as the log body, not only the template.
+    .WithLogging(_ => { }, options => options.IncludeFormattedMessage = true);
 
 // Export only when an endpoint is set, like a connection string. In the cluster
 // this is Alloy. A local "dotnet run" without the variable exports nothing.
